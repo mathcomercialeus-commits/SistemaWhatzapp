@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Relatório de Envios</h3>
+
+<table class="table table-bordered table-striped table-sm">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Data/Hora</th>
+      <th>Caixa</th>
+      <th>Entregador</th>
+      <th>Cliente</th>
+      <th>Telefone</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in envios %}
+    <tr>
+      <td>{{ e.id }}</td>
+      <td>{{ e.data_hora }}</td>
+      <td>{{ e.nome_usuario or '-' }}</td>
+      <td>{{ e.nome_entregador or '-' }}</td>
+      <td>{{ e.nome_cliente }}</td>
+      <td>{{ e.telefone_cliente }}</td>
+      <td>{{ e.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

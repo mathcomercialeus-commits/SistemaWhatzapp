@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Usuários</h3>
+  <a href="{{ url_for('novo_usuario') }}" class="btn btn-primary btn-sm">Novo Usuário</a>
+</div>
+
+<table class="table table-bordered table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nome</th>
+      <th>Login</th>
+      <th>Função</th>
+      <th>Ativo</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in usuarios %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.nome }}</td>
+      <td>{{ u.login }}</td>
+      <td>{{ u.role }}</td>
+      <td>{{ 'Sim' if u.ativo else 'Não' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

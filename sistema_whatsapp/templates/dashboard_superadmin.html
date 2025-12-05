@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Painel do Superadministrador</h3>
+<ul>
+  <li><a href="{{ url_for('listar_usuarios') }}">Gerenciar Usuários</a></li>
+  <li><a href="{{ url_for('listar_entregadores') }}">Gerenciar Entregadores</a></li>
+  <li><a href="{{ url_for('listar_mensagens') }}">Gerenciar Mensagens</a></li>
+  <li><a href="{{ url_for('caixa_enviar') }}">Tela do Caixa (Envio)</a></li>
+  <li><a href="{{ url_for('relatorios_envios') }}">Relatório de Envios</a></li>
+</ul>
+{% endblock %}

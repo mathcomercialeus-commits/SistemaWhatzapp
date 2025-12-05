@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Novo Usuário</h3>
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Nome</label>
+    <input type="text" name="nome" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Login</label>
+    <input type="text" name="login" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Senha</label>
+    <input type="password" name="senha" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Função</label>
+    <select name="role" class="form-select" required>
+      <option value="superadmin">Superadmin</option>
+      <option value="admin">Admin</option>
+      <option value="caixa">Caixa</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-success">Salvar</button>
+</form>
+{% endblock %}
