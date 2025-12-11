@@ -1,12 +1,29 @@
+import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, g, flash
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
 import datetime
+from functools import wraps
+from uuid import uuid4
+
+from flask import (
+    Flask,
+    abort,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "TROQUE-ESSA-CHAVE-POR-UMA-SECRETA"
 DATABASE = "avaliacao_entregadores.db"
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"pdf"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # ---------------- BANCO DE DADOS ----------------
 
@@ -28,6 +45,9 @@ def close_connection(exception):
 def init_db():
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
+
+    # Cria diretório de uploads
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
     # Tabela usuarios
     cur.execute(
@@ -96,6 +116,35 @@ def init_db():
         """
     )
 
+    # Tabela de vagas (site DulimaGroup)
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vagas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            ativa INTEGER NOT NULL DEFAULT 1
+        );
+        """
+    )
+
+    # Tabela de candidaturas
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS candidaturas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_vaga INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL,
+            telefone TEXT,
+            descricao TEXT,
+            arquivo_pdf TEXT,
+            data_envio TEXT,
+            FOREIGN KEY (id_vaga) REFERENCES vagas(id)
+        );
+        """
+    )
+
     conn.commit()
 
     # Cria superadmin padrão se não existir
@@ -111,6 +160,20 @@ def init_db():
             ("Super Administrador", "admin", senha_hash, "superadmin", 1),
         )
         print("Usuário superadmin criado. Login: admin / Senha: admin")
+
+    # Cadastra vagas de exemplo se não existirem
+    cur.execute("SELECT COUNT(*) as total FROM vagas")
+    vagas_total = cur.fetchone()["total"]
+    if vagas_total == 0:
+        vagas_demo = [
+            ("Analista de Talentos", "Atue em recrutamento e seleção com foco em tecnologia."),
+            ("Coordenador de RH", "Lidere projetos de pessoas e melhore a experiência de colaboradores."),
+            ("Assistente Administrativo", "Apoie rotinas administrativas e mantenha cadastros organizados."),
+        ]
+        cur.executemany(
+            "INSERT INTO vagas (titulo, descricao, ativa) VALUES (?, ?, 1)", vagas_demo
+        )
+        print("Vagas de exemplo criadas para o site DulimaGroup.")
 
     conn.commit()
     conn.close()
@@ -158,6 +221,10 @@ def enviar_whatsapp(telefone, mensagem):
 
     # Exemplo de retorno de sucesso
     return True, "simulado OK"
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # ---------------- ROTAS DE AUTENTICAÇÃO ----------------
@@ -452,6 +519,76 @@ def relatorios_envios():
     )
     envios = cur.fetchall()
     return render_template("relatorios_envios.html", envios=envios)
+
+
+# ---------------- SITE DULIMAGROUP (PÚBLICO) ----------------
+
+
+@app.route("/dulimagroup")
+def dulimagroup_home():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM vagas WHERE ativa = 1 ORDER BY id DESC")
+    vagas = cur.fetchall()
+    return render_template("dulimagroup_home.html", vagas=vagas)
+
+
+@app.route("/dulimagroup/vaga/<int:vaga_id>", methods=["GET", "POST"])
+def dulimagroup_vaga(vaga_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT * FROM vagas WHERE id = ? AND ativa = 1", (vaga_id,))
+    vaga = cur.fetchone()
+    if not vaga:
+        abort(404)
+
+    if request.method == "POST":
+        nome = request.form.get("nome")
+        email = request.form.get("email")
+        telefone = request.form.get("telefone")
+        descricao = request.form.get("descricao", "")
+        arquivo = request.files.get("curriculo")
+
+        if not nome or not email or not arquivo:
+            flash("Nome, e-mail e o PDF do currículo são obrigatórios.", "danger")
+            return redirect(url_for("dulimagroup_vaga", vaga_id=vaga_id))
+
+        if len(descricao) > 500:
+            flash("A descrição deve ter no máximo 500 caracteres.", "danger")
+            return redirect(url_for("dulimagroup_vaga", vaga_id=vaga_id))
+
+        if not allowed_file(arquivo.filename):
+            flash("Envie apenas arquivos PDF.", "danger")
+            return redirect(url_for("dulimagroup_vaga", vaga_id=vaga_id))
+
+        filename = secure_filename(arquivo.filename)
+        unique_name = f"{uuid4().hex}_{filename}"
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+        arquivo.save(file_path)
+
+        data_envio = datetime.datetime.now().isoformat(sep=" ", timespec="seconds")
+        cur.execute(
+            """
+            INSERT INTO candidaturas (id_vaga, nome, email, telefone, descricao, arquivo_pdf, data_envio)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (vaga_id, nome, email, telefone, descricao, unique_name, data_envio),
+        )
+        db.commit()
+
+        flash("Candidatura enviada com sucesso!", "success")
+        return redirect(url_for("dulimagroup_vaga", vaga_id=vaga_id))
+
+    cur.execute(
+        "SELECT * FROM candidaturas WHERE id_vaga = ? ORDER BY id DESC LIMIT 5", (vaga_id,)
+    )
+    candidaturas = cur.fetchall()
+    return render_template(
+        "dulimagroup_vaga.html",
+        vaga=vaga,
+        candidaturas=candidaturas,
+        max_descricao=500,
+    )
 
 
 # ---------------- MAIN ----------------
