@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DulimaGroup | Oportunidades</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body { background: linear-gradient(180deg, #0b132b 0%, #1c2541 35%, #3a506b 100%); color: #edf2f4; }
+        .hero { padding: 4rem 1rem; text-align: center; }
+        .hero h1 { font-weight: 700; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.15); }
+        .card-title { color: #1c2541; }
+        .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: .12em; color: #f3d250; }
+        footer { color: #cbd5e1; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background:#0b132b;">
+        <div class="container">
+            <span class="navbar-brand logo">DULIMAGROUP | RH</span>
+            <span class="text-light">Seleção de candidatos</span>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <p class="text-uppercase mb-2" style="letter-spacing: .15em; color: #8d99ae;">Carreiras</p>
+            <h1 class="display-5">Conectamos talentos às oportunidades certas</h1>
+            <p class="lead text-secondary">Confira as vagas abertas e envie seu currículo em PDF com um breve resumo de sua experiência.</p>
+        </div>
+    </section>
+
+    <div class="container pb-5">
+        <div class="row g-4">
+            {% if vagas %}
+                {% for vaga in vagas %}
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{ vaga['titulo'] }}</h5>
+                            <p class="card-text text-secondary">{{ vaga['descricao'] }}</p>
+                            <div class="mt-auto">
+                                <a href="{{ url_for('dulimagroup_vaga', vaga_id=vaga['id']) }}" class="btn btn-primary w-100">Quero me candidatar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">Nenhuma oportunidade disponível no momento. Volte em breve!</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer class="py-4 text-center">
+        <small>DulimaGroup • Seleção especializada em pessoas e resultados.</small>
+    </footer>
+</body>
+</html>
